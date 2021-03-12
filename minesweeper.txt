@@ -1,0 +1,708 @@
+// https://codehs.com/sandbox/id/javascript-graphics-SVIDCh
+
+var testMode = false;
+var showLogging = true;
+var rows = 0;
+var cols = 0;
+var difficulty = 2;
+var SQUARE_SIZE = 41;
+var squares = null;
+var outline1 = new Line(0, 0, 0, 0);
+var outline2 = new Line(0, 0, 0, 0);
+var outline3 = new Line(0, 0, 0, 0);
+var outline4 = new Line(0, 0, 0, 0);
+var flagText = new Text("00", "12pt Arial");
+var btnBgColor = "#2499cc";
+var btnFgColor = "#eff2f4";
+var btnHoverColor = "#dddddd";
+var startButton = new Rectangle(100, 25);
+var cmbDifficulty = null;
+var txtDifficulty = null;
+var currentSquare = null;
+var mineAmount = 0;
+var banner = null;
+var clock = null;
+var flagSquare = null
+var clockBg;
+var clockFg;
+var clockTop;
+var hourHand;
+var minuteHand;
+var ticks = 0;
+var READY = 1;
+var RUNNING = 2;
+var GAMEOVER = 4;
+var gameState = READY;
+var gameOverImage = null;
+var loserUrl = null;
+var winnerUrl = null;
+
+function start() {
+    drawBanner();
+    drawMineField();
+    initializeClock();
+    mouseMoveMethod(onMouseMove);
+    mouseClickMethod(onMouseClick);
+    keyDownMethod(onkeyDown);
+    drawStartButton();
+    drawCombobox();
+    setDifficulty(difficulty);
+    preLoadImage();
+    log("game ready");
+}
+
+function reset() {
+    log("game resetting");
+    resizeMineField(rows, cols);
+    gameState = RUNNING;
+    log("game ready");
+}
+
+function resizeMineField(r, c) {
+    stopTimer(onTick);
+    clock.setText("000");
+    currentSquare = null;
+    
+    if (gameOverImage != null) {
+        gameOverImage.setPosition(gameOverImage.getX(), getHeight());
+    }
+    
+    for(var j = 0; j < rows; j++) {
+        for(var i = 0; i < cols; i++) {
+            if (squares.get(j, i).marker != undefined) {
+                // remove markers
+                removeMarker(squares.get(j, i));
+            }
+            // remove mines and text
+            if (squares.get(j, i).tag != undefined) {
+                remove(squares.get(j, i).tag);
+            }
+            // remove field
+            remove(squares.get(j, i));
+        }
+    }
+    
+    rows = r;
+    cols = c;
+    
+    moveBanner();
+    removeFrame();
+    drawMineField();
+    drawFrame();
+    
+    if (testMode) {
+        testField();
+    } else {
+        plantMines();
+    }
+
+    ticks = 0;
+    gameState = READY;
+}
+
+function preLoadImage() {
+    loserUrl = imageLoadHelper("https://i.gifer.com/3mpp.gif", 471 * 0.75, 366 * 0.75);
+    winnerUrl = imageLoadHelper("https://i.imgur.com/GQp8XLk.png", 500 * 0.75, 282 * 0.75);
+}
+
+function imageLoadHelper(imageUrl, w, h) {
+    var image = new WebImage(imageUrl);
+    image.setSize(w, h);
+    image.setPosition(getWidth()/2 - image.getWidth()/2, getHeight());
+    return image;
+}
+
+function drawCombobox() {
+    var x = 25;
+    var y = 24;
+    
+    txtDifficulty = new Text("Medium", "11pt Arial");
+    txtDifficulty.setColor(btnBgColor);
+    
+    var arrowWidth = 7;
+    var bg = new Rectangle(75 + arrowWidth, 25);
+    bg.setPosition(x, y);
+    bg.setColor(btnBgColor);
+
+    var fg = new Rectangle(bg.getWidth() - 2, bg.getHeight() - 2);
+    fg.setPosition(bg.getX() + 1, bg.getY() + 1);
+    fg.setColor(btnFgColor);
+    
+    txtDifficulty.setPosition(
+        fg.getX() + 7, 
+        (fg.getY() + 1 + fg.getHeight()) - txtDifficulty.getHeight() / 2);
+    
+    var offsetX = bg.getX() + bg.getWidth() - 16;
+    var offsetY = bg.getY() + bg.getHeight() / 2 - 3;
+    var arrow = new Polygon();
+    arrow.addPoint(1 + offsetX, 1 + offsetY);
+    arrow.addPoint(9 + offsetX, 1 + offsetY);
+    arrow.addPoint(5 + offsetX, 7 + offsetY);
+    arrow.setColor(btnBgColor);
+    
+    add(bg);
+    add(fg);
+    add(txtDifficulty);
+    add(arrow);
+    
+    cmbDifficulty = fg;
+}
+
+function drawStartButton() {
+    var x = getWidth() - 100;
+    var y = 24;
+
+    var txt = new Text("Start", "11pt Arial");
+    txt.setColor(btnBgColor);
+    
+    var bg = new Rectangle(75, 25);
+    bg.setPosition(x, y);
+    bg.setColor(btnBgColor);
+
+    var fg = new Rectangle(bg.getWidth() - 2, bg.getHeight() - 2);
+    fg.setPosition(bg.getX() + 1, bg.getY() + 1);
+    fg.setColor(btnFgColor);
+    
+    txt.setPosition(
+        (fg.getX() + fg.getWidth() / 2) - txt.getWidth() / 2, 
+        (fg.getY() + 1 + fg.getHeight()) - txt.getHeight() / 2);
+    
+    add(bg);
+    add(fg);
+    add(txt);
+    
+    startButton = fg;
+}
+
+function onStartButtonClick(e) {
+    if (startButton.containsPoint(e.getX(), e.getY())) {
+        gameState = RUNNING;
+        reset();
+        setTimer(onTick, 1000);
+    }
+}
+
+function onCmbDifficultyClick(e) {
+    if (cmbDifficulty.containsPoint(e.getX(), e.getY())) {
+        difficulty++;
+        setDifficulty(difficulty);
+    }
+}
+
+function setDifficulty() {
+    if (difficulty < 0) {
+        difficulty = 0;
+    }
+    
+    if (difficulty >= 3) {
+        difficulty = 0;
+    }
+    
+    if (difficulty == 0) {
+        txtDifficulty.setText("Easy");
+        resizeMineField(5, 5);
+    } else if (difficulty == 1) {
+        txtDifficulty.setText("Medium");
+        resizeMineField(6, 7);
+    } else {
+        txtDifficulty.setText("Hard");
+        resizeMineField(10, 9);
+    }
+}
+        
+function toggleButtonColor(e, button, hoverColor, defaultColor) {
+    if (button.containsPoint(e.getX(), e.getY())) {
+        button.setColor(hoverColor);
+    } else {
+        if (button.getColor() == hoverColor) {
+            button.setColor(defaultColor);
+        }
+    }
+}
+
+function moveBanner() {
+    banner.setWidth(SQUARE_SIZE * cols);
+    banner.setHeight(50);
+    banner.setPosition(getMineFieldX(), getMineFieldY() - banner.getHeight());
+    
+    removeMarker(flagSquare);
+    flagSquare.setPosition(banner.getX() + banner.getWidth() / 2 - flagSquare.getWidth() - 35, banner.getY() + banner.getHeight() / 2 - flagSquare.getHeight() / 2);
+    addMarker(flagSquare);
+    flagText.setPosition(flagSquare.getX() + 39, banner.getY() + banner.getHeight() / 2 + flagText.getHeight() / 2);
+    
+    setClockPosition();
+    clockBg.setPosition(clock.getX() - 20, clock.getY() - 7);
+    clockFg.setPosition(clockBg.getX(), clockBg.getY());
+    clockTop.setPosition(clockBg.getX() - clockTop.getWidth() / 2, clockBg.getY() - clockBg.getRadius() - 4);
+    hourHand.setPosition(clockBg.getX(), clockBg.getY() + 1);
+    hourHand.setEndpoint(clockBg.getX(), clockBg.getY() - 4);
+    minuteHand.setPosition(clockBg.getX(), clockBg.getY() + 1);
+    minuteHand.setEndpoint(clockBg.getX() + 5, clockBg.getY() - 4);
+}
+function drawBanner() {
+    log("drawing banner");
+    banner = new Rectangle(SQUARE_SIZE * cols, 50);
+    banner.setPosition(getMineFieldX(), getMineFieldY() - banner.getHeight());
+    banner.setColor("#4a752c");
+    add(banner);
+    
+    drawFlagCount();
+}
+function drawFlagCount() {
+    flagSquare = new Rectangle(SQUARE_SIZE - 0, SQUARE_SIZE - 0);
+    flagSquare.setPosition(banner.getX() + banner.getWidth() / 2 - flagSquare.getWidth() - 35, banner.getY() + banner.getHeight() / 2 - flagSquare.getHeight() / 2);
+    flagSquare.setColor("#4a752c");
+    add(flagSquare);
+    addMarker(flagSquare);
+    
+    flagText.setText("0");
+    flagText.setPosition(banner.getX() + banner.getWidth() / 2 - flagText.getWidth() - 25, banner.getY() + banner.getHeight() / 2 + flagText.getHeight() / 2);
+    flagText.setColor(Color.white);
+    add(flagText);
+}
+function drawClock() {
+    clockBg = new Circle(11);
+    clockBg.setPosition(clock.getX() - 20, clock.getY() - 7);
+    clockBg.setColor("#ffd156");
+    add(clockBg);
+    
+    clockFg = new Circle(7);
+    clockFg.setPosition(clockBg.getX(), clockBg.getY());
+    clockFg.setColor("#f2f2f2");
+    add(clockFg);
+    
+    clockTop = new Rectangle(10, 4);
+    clockTop.setPosition(clockBg.getX() - clockTop.getWidth() / 2, clockBg.getY() - clockBg.getRadius() - 4);
+    clockTop.setColor("#ffd156");
+    add(clockTop);
+    
+    hourHand = new Line(clockBg.getX(), clockBg.getY() + 1, clockBg.getX(), clockBg.getY() - 4);
+    hourHand.setLineWidth(1);
+    add(hourHand);
+    
+    minuteHand = new Line(clockBg.getX(), clockBg.getY() + 1, clockBg.getX() + 5, clockBg.getY() - 4);
+    minuteHand.setLineWidth(1);
+    add(minuteHand);
+}
+function initializeClock() {
+    clock = new Text("000", "12pt Arial");
+    setClockPosition();
+    clock.setColor(Color.white);
+    add(clock);
+    drawClock();
+}
+function setClockPosition() {
+    clock.setPosition(banner.getX() + banner.getWidth() / 2 + clock.getWidth() + 20, banner.getY() + banner.getHeight() / 2 + clock.getHeight() / 2);
+}
+function onTick() {
+    var text = "00" + ++ticks;
+    clock.setText(text.substring(text.length - 3, text.length));
+    if (ticks >= 999) {
+        log("max tick count reached, stopping timer");
+        stopTimer(onTick);
+    }
+}
+
+function incrementFlagCount() {
+    mineAmount++;
+    flagText.setText(mineAmount);
+}
+function decrementFlagCount() {
+    mineAmount--;
+    flagText.setText(mineAmount);
+}
+
+function addMarker(square) {
+    var x = square.getX() + square.getWidth() / 2 - 11;
+    var y = square.getY();
+    
+    var staff = new Rectangle(3, 23);
+    staff.setPosition(x + 5, y + 7);
+    staff.setColor(Color.red);
+    add(staff);
+    
+    var flag = new Rectangle(13, 10);
+    flag.setPosition(staff.getX() + staff.getWidth(), staff.getY() + 2);
+    flag.setColor(Color.red);
+    add(flag);
+    
+    var base = new Rectangle(7, 3);
+    base.setPosition(staff.getX() - 2, staff.getY() + staff.getHeight());
+    base.setColor(Color.red);
+    add(base);
+    
+    square.marker = {
+        staff: staff,
+        flag: flag,
+        base: base
+    };
+    
+    decrementFlagCount();
+    log("added marker at position " + x + ", " + y);
+}
+function removeMarker(square) {
+    remove(square.marker.staff);
+    remove(square.marker.flag);
+    remove(square.marker.base);
+    square.marker = undefined;
+    incrementFlagCount();
+    log("removed marker");
+}
+
+function getMineFieldX() {
+    return getWidth() / 2 - (SQUARE_SIZE * cols) / 2;
+}
+function getMineFieldY() {
+    return getHeight() / 2 - (SQUARE_SIZE * rows) / 2  + banner.getHeight() / 2;
+}
+function drawMineField() {
+    var x = 0;
+    var y = 0;
+    
+    var reverseColor = false;
+    var offsetX = getMineFieldX();
+    var offsetY = getMineFieldY();
+    squares = new Grid(rows, cols);
+    
+    for(var j = 0; j < rows; j++) {
+        for(var i = 0; i < cols; i++) {
+            var rect = new Rectangle(SQUARE_SIZE, SQUARE_SIZE);
+            rect.setPosition(offsetX + x, offsetY + y);
+            if (reverseColor) {
+                rect.setColor("#a2d149");
+            } else {
+                rect.setColor("#aad751");
+            }
+            reverseColor = !reverseColor;
+            rect.isMine = false
+            squares.set(j, i, rect);
+            add(rect);
+            x += rect.getWidth();
+        }
+        y += rect.getHeight();
+        x = 0;
+    }
+}
+
+function drawFrame() {
+    outline1.move(-1000, -1000);
+    outline2.move(-1000, -1000);
+    outline3.move(-1000, -1000);
+    outline4.move(-1000, -1000);
+    add(outline1);
+    add(outline2);
+    add(outline3);
+    add(outline4);
+    outline1.setLineWidth(1);
+    outline2.setLineWidth(1);
+    outline3.setLineWidth(1);
+    outline4.setLineWidth(1);
+}
+function removeFrame() {
+    remove(outline1);
+    remove(outline2);
+    remove(outline3);
+    remove(outline4);
+}
+function updateFrame(square) {
+    
+    var w = square.getWidth();
+    var h = square.getHeight();
+    
+    var x1 = square.getX();
+    var y1 = square.getY();
+    
+    var x2 = x1 + square.getWidth();
+    var y2 = y1 + square.getHeight();
+
+    outline1.setPosition(x1, y1);
+    outline1.setEndpoint(x2, y1);
+    
+    outline2.setPosition(x2, y1);
+    outline2.setEndpoint(x2, y2);
+    
+    outline3.setPosition(x1, y1);
+    outline3.setEndpoint(x1, y2);
+    
+    outline4.setPosition(x1, y2);
+    outline4.setEndpoint(x2, y2);
+}
+
+function testField() {
+    mineAmount = 3;
+    squares.get(1, 1).isMine = true;
+    squares.get(1, 2).isMine = true;
+    squares.get(4, 3).isMine = true;
+    flagText.setText(mineAmount);
+}
+function plantMines() {
+    mineAmount = Math.floor(rows * cols * 0.15);
+    var minesPlanted = 0;
+    while (minesPlanted < mineAmount) {
+        var row = Randomizer.nextInt(0, rows - 1);
+        var col = Randomizer.nextInt(0, cols - 1)
+        if (!squares.get(row, col).isMine) {
+            squares.get(row, col).isMine = true;  
+            minesPlanted++;
+        }
+    }
+    flagText.setText(mineAmount);
+}
+
+function onMouseMove(e) {
+    toggleButtonColor(e, startButton, btnHoverColor, btnFgColor);
+    toggleButtonColor(e, cmbDifficulty, btnHoverColor, btnFgColor);
+    
+    if (gameState == RUNNING && isMouseOverBoard(e)) {
+        for(var j = 0; j < rows; j++) {
+            for(var i = 0; i < cols; i++) {
+                if (isMouseOverSquare(e, squares.get(j, i))) {
+                    updateFrame(squares.get(j, i));
+                    currentSquare = squares.get(j, i);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+function isMouseOverBoard(e) {
+    var w = squares.get(0, 0).getWidth();
+    var h = squares.get(0, 0).getHeight();
+    
+    var topLeft = squares.get(0, 0);
+    var lowerRight = squares.get(squares.numRows() - 1, squares.numCols() - 1);
+    
+    return e.getX() >= topLeft.getX() && e.getX() <= lowerRight.getX() + w &&
+           e.getY() >= topLeft.getY() && e.getY() <= lowerRight.getY() + h;
+}
+
+function isMouseOverSquare(e, square) {
+    return e.getX() >= square.getX() && 
+           e.getX() <= square.getX() + square.getWidth() &&
+           e.getY() >= square.getY() && 
+           e.getY() <= square.getY() + square.getHeight()
+}
+
+function onMouseClick(e) {
+    onStartButtonClick(e);
+    onCmbDifficultyClick(e);
+    
+    if (gameState == GAMEOVER) {
+        remove(gameOverImage);
+        gameState = READY;
+    }
+    
+    if (gameState == RUNNING && isMouseOverBoard(e)) {
+        for(var j = 0; j < rows; j++) {
+            for(var i = 0; i < cols; i++) {
+                if (isMouseOverSquare(e, squares.get(j, i))) {
+                    log("clicked on " + j + ", " + i);
+                    
+                    if (squares.get(j, i).marker != undefined) {
+                        log("marker was clicked");
+                        return;
+                    }
+                    
+                    if (squares.get(j, i).isMine) {
+                        gameOverLoser();
+                        return;
+                    }
+                    
+                    if (squares.get(j, i).adjacentMines != undefined) {
+                        return;
+                    }
+                    
+                    squares.get(j, i).adjacentMines = countAdjacentMines(j, i);
+                    
+                    log(j + ", " + i + " has " + squares.get(j, i).adjacentMines + " adjacent mines");
+                    
+                    toggleSquareColor(squares.get(j, i));
+
+                    if (squares.get(j, i).adjacentMines == 0) {
+                        log("recursively checking neighboring cells");
+                        uncoverAdjacentCells(j, i);
+                    } else {
+                        addAdjacentMineCountText(squares.get(j, i));
+                    }
+
+                    if (hasUncoveredAllSafeCells()) {
+                        gameOverWinner();
+                        return;
+                    }
+                    
+                    return;
+                }
+            }
+        }
+    }
+}
+
+function onkeyDown(e) {
+    if (gameState == RUNNING && currentSquare != null && currentSquare.adjacentMines == undefined) {
+        if (currentSquare.marker == undefined) {
+            addMarker(currentSquare);
+        } else {
+            removeMarker(currentSquare);
+        }
+    }
+}
+
+function hasUncoveredAllSafeCells() {
+    for(var j = 0; j < rows; j++) {
+        for(var i = 0; i < cols; i++) {
+            if (!squares.get(j, i).isMine) {
+                if (squares.get(j, i).adjacentMines == undefined) {
+                    return false;   
+                }
+            }
+        }
+    }
+    return true;
+}
+
+function showAllMines() {
+    for(var j = 0; j < rows; j++) {
+        for(var i = 0; i < cols; i++) {
+            if (squares.get(j, i).isMine) {
+                var mine = new Circle(SQUARE_SIZE / 4);
+                mine.setPosition(
+                    squares.get(j, i).getX() + squares.get(j, i).getWidth() / 2, 
+                    squares.get(j, i).getY() + squares.get(j, i).getHeight() / 2);
+                mine.setColor("#a83237");
+                squares.get(j, i).tag = mine;
+                add(mine);
+                
+                moveMakerInFrontOfMine(squares.get(j, i));
+            }
+        }
+    }
+}
+
+function moveMakerInFrontOfMine(square) {
+    // if a mine and marker share the same space move the marker in front of the mine
+    if (square.marker != undefined) {
+        removeMarker(square);
+        addMarker(square);
+    }
+}
+
+function toggleSquareColor(square) {
+    if (square.getColor() == "#e5c29f" || square.getColor() == "#d7b899") {
+        return;
+    }
+    if (square.getColor() == "#aad751") {
+        square.setColor("#e5c29f");
+    } else {
+        square.setColor("#d7b899");
+    }
+}
+
+function uncoverAdjacentCells(row, col) {
+    if (squares.get(row, col).adjacentMines != 0) {
+        return;
+    }
+        
+    var minRow = row - 1;
+    var minCol = col - 1;
+    var maxRow = row + 1
+    var maxCol = col + 1
+
+    // print("minRow: " + minRow + ", minCol: " + minCol);
+    // print("row:    " + row    + ", col:     " + col);
+    // print("maxRow: " + maxRow + ", maxCol:  " + maxCol);
+    
+    for(var y = minRow; y <= maxRow; y++) {
+        for(var x = minCol; x <= maxCol; x++) {
+            if (y != row || x != col) {
+                if (x >= 0 && y >= 0 && x < squares.numCols() && y < squares.numRows()) {
+                    // print('y' + y + ', x' + x);
+                    
+                    if (squares.get(y, x).adjacentMines != undefined) {
+                        continue;
+                    }
+                    
+                    squares.get(y, x).adjacentMines = countAdjacentMines(y, x);
+                
+                    log(y + ", " + x + " has " + squares.get(y, x).adjacentMines + " adjacent mines");
+                    
+                    if (squares.get(y, x).marker != undefined) {
+                        removeMarker(squares.get(y, x));
+                    }
+                    
+                    toggleSquareColor(squares.get(y, x));
+                    
+                    if (squares.get(y, x).adjacentMines == 0) {
+                        // recursively check cells
+                        uncoverAdjacentCells(y, x);
+                    } else {
+                        addAdjacentMineCountText(squares.get(y, x));
+                    }
+                }
+            }
+        }
+    }
+}
+
+function addAdjacentMineCountText(square) {
+    var txt = new Text(square.adjacentMines, "20pt Arial");
+    txt.setPosition(square.getX() + (square.getWidth() / 2), square.getY() + (square.getHeight() / 2));
+    txt.setPosition(txt.getX() - (txt.getWidth() / 2), txt.getY() + (txt.getHeight() / 2) - 3);
+    txt.setColor(Color.blue);
+    add(txt);
+    square.tag = txt;
+}
+
+function countAdjacentMines(row, col) {
+    var minRow = row - 1;
+    var minCol = col - 1;
+    var maxRow = row + 1
+    var maxCol = col + 1
+    var mineCounter = 0;
+    
+    for(var y = minRow; y <= maxRow; y++) {
+        for(var x = minCol; x <= maxCol; x++) {
+            if (x >= 0 && y >= 0 && x < squares.numCols() && y < squares.numRows()) {
+                if (squares.get(y, x).isMine) {
+                    mineCounter++;
+                }
+            }
+        }
+    }
+    return mineCounter;
+}
+
+function gameOverLoser() {
+    log("THOU ART DEAD");
+    showAllMines();
+    stopTimer(onTick);
+    gameState = GAMEOVER;
+    
+    gameOverImage = loserUrl;
+    add(gameOverImage);
+    setTimer(onGameOverTick, 50);
+}
+
+function gameOverWinner() {
+    log("winner");
+    stopTimer(onTick);
+    gameState = GAMEOVER;
+    
+    gameOverImage = winnerUrl;
+    add(winnerUrl);
+    setTimer(onGameOverTick, 50);
+}
+
+function onGameOverTick() {
+    if (gameOverImage.getY() >= getHeight()/2 - gameOverImage.getHeight()/2) {
+        gameOverImage.move(0, -15);
+    } else {
+        stopTimer(onGameOverTick);
+    }
+}
+
+function log(message) {
+    if (showLogging) {
+        print(message);
+    }
+}
