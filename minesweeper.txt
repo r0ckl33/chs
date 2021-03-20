@@ -22,7 +22,7 @@ var currentSquare = null;
 var mineAmount = 0;
 var banner = null;
 var clock = null;
-var flagSquare = null
+var flagSquare = null;
 var clockBg;
 var clockFg;
 var clockTop;
