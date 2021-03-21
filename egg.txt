@@ -56,23 +56,32 @@ function log(message) {
 }
 
 function keyDown(e) {
-    // set undo for player and egg positions
+    var moveX = 0;
+    var moveY = 0;
+    
+    if (e.keyCode == Keyboard.LEFT) {
+		moveX = -blockSize;
+	} else if (e.keyCode == Keyboard.RIGHT) {
+		moveX = blockSize;
+	} else if (e.keyCode == Keyboard.UP) {
+		moveY = -blockSize;
+	} else if (e.keyCode == Keyboard.DOWN) {
+		moveY = blockSize;
+	}
+	// set undo for player and egg positions
     // check for collision with egg, move egg
     // check for collision with wall / egg on egg or wall
     // undo if collision
     // check for all eggs to be on all nests
-    if (e.keyCode == Keyboard.LEFT) {
-		player.move(-blockSize, 0);
-	} else if (e.keyCode == Keyboard.RIGHT) {
-		player.move(blockSize, 0);
-	} else if (e.keyCode == Keyboard.UP) {
-		player.move(0, -blockSize);
-	} else if (e.keyCode == Keyboard.DOWN) {
-		player.move(0, blockSize);
-	}
+	player.move(moveX, moveY);
 }
 
 function loadLevel(level) {
+    removeTiles(floors);
+    removeTiles(walls);
+    removeTiles(nests);
+    removeTiles(eggs);
+    
     var w = levels[level][0].length;
     var h = levels[level].length;
     log('level size: ' + w + ' x ' + h);
@@ -89,16 +98,16 @@ function loadLevel(level) {
         for(var i = 0; i < w; i++) {
             var index = levels[level][j].substr(i, 1);
             if (index == "0") {
-                floors.push(addTile(x + xOffset, y + yOffset, FLOOR_URL));
+                floors.push(loadTile(x + xOffset, y + yOffset, FLOOR_URL));
             } else if (index == "1") {
-                walls.push(addTile(x + xOffset, y + yOffset, WALL_URL));
+                walls.push(loadTile(x + xOffset, y + yOffset, WALL_URL));
             } else if (index == "2") {
-                nests.push(addTile(x + xOffset, y + yOffset, NEST_URL));
+                nests.push(loadTile(x + xOffset, y + yOffset, NEST_URL));
             } else if (index == "3") {
-                floors.push(addTile(x + xOffset, y + yOffset, FLOOR_URL));
-                eggs.push(addTile(x + xOffset, y + yOffset, EGG_URL));
+                floors.push(loadTile(x + xOffset, y + yOffset, FLOOR_URL));
+                eggs.push(loadTile(x + xOffset, y + yOffset, EGG_URL));
             } else if (index == "4") {
-                floors.push(addTile(x + xOffset, y + yOffset, FLOOR_URL));
+                floors.push(loadTile(x + xOffset, y + yOffset, FLOOR_URL));
                 player.setPosition(x + xOffset, y + yOffset);
                 
             }
@@ -107,21 +116,36 @@ function loadLevel(level) {
         xOffset = 0;
         yOffset += blockSize;
     }
+    addTiles(floors);
+    addTiles(walls);
+    addTiles(nests);
+    addTiles(eggs);
     add(player);
 }
 
-function addTile(x, y, url) {
+function loadTile(x, y, url) {
     var tile = imageLoadHelper(url, blockSize, blockSize);
     tile.setPosition(x, y);
-    add(tile);
     return tile;
+}
+
+function removeTiles(array) {
+    for(var i = 0; i < array.length; i++) {
+        add(array[i]);
+    }
+}
+
+function addTiles(array) {
+    for(var i = 0; i < array.length; i++) {
+        add(array[i]);
+    }
 }
 
 var levels = [
     ["11111111","10000021","14030301","10000021","11111111"],
     ["  111   ","  121   ","  101111","11130321","12034111","111131  ","   121  ","   111  "],
-    ["1111111","1000001","1403001","1113101","1000101","1200001","1200001","1203001","1111111"],
-    ["11111    ","14001    ","10331 111",""10301 121","111011121"," 11000021"," 10001001"," 10001111"," 11111   "],
+    ["1111111","1000001","1403001","1113101","1000101","1200001","1200001","1203001","1111111"]//,
+    //["11111    ","14001    ","10331 111",""10301 121","111011121"," 11000021"," 10001001"," 10001111"," 11111   "]
 ];
 
 
