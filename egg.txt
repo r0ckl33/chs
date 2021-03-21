@@ -57,6 +57,10 @@ function log(message) {
 
 function keyDown(e) {
     // set undo for player and egg positions
+    // check for collision with egg, move egg
+    // check for collision with wall / egg on egg or wall
+    // undo if collision
+    // check for all eggs to be on all nests
     if (e.keyCode == Keyboard.LEFT) {
 		player.move(-blockSize, 0);
 	} else if (e.keyCode == Keyboard.RIGHT) {
@@ -116,7 +120,8 @@ function addTile(x, y, url) {
 var levels = [
     ["11111111","10000021","14030301","10000021","11111111"],
     ["  111   ","  121   ","  101111","11130321","12034111","111131  ","   121  ","   111  "],
-    ["1111111","1000001","1403001","1113101","1000101","1200001","1200001","1203001","1111111"]
+    ["1111111","1000001","1403001","1113101","1000101","1200001","1200001","1203001","1111111"],
+    ["11111    ","14001    ","10331 111",""10301 121","111011121"," 11000021"," 10001001"," 10001111"," 11111   "],
 ];
 
 
