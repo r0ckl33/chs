@@ -1,3 +1,5 @@
+// https://codehs.com/sandbox/id/javascript-graphics-SVIDCh
+
 var showLogging = true;
 var blockSize = 25;
 var WALL_URL = "https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/block.png";
