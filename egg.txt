@@ -40,7 +40,7 @@ function start() {
     
     keyDownMethod(keyDown);
     
-    loadLevel(0);
+    loadLevel(3);
     log("loaded");
 }
 
@@ -57,28 +57,8 @@ function log(message) {
     }
 }
 
-function keyDown(e) {
-    var moveX = 0;
-    var moveY = 0;
-    
-    if (e.keyCode == Keyboard.LEFT) {
-		moveX = -blockSize;
-	} else if (e.keyCode == Keyboard.RIGHT) {
-		moveX = blockSize;
-	} else if (e.keyCode == Keyboard.UP) {
-		moveY = -blockSize;
-	} else if (e.keyCode == Keyboard.DOWN) {
-		moveY = blockSize;
-	}
-	// set undo for player and egg positions
-    // check for collision with egg, move egg
-    // check for collision with wall / egg on egg or wall
-    // undo if collision
-    // check for all eggs to be on all nests
-	player.move(moveX, moveY);
-}
-
 function loadLevel(level) {
+    log("removing tiles");
     removeTiles(floors);
     removeTiles(walls);
     removeTiles(nests);
@@ -118,6 +98,7 @@ function loadLevel(level) {
         xOffset = 0;
         yOffset += blockSize;
     }
+    log("adding tiles");
     addTiles(floors);
     addTiles(walls);
     addTiles(nests);
@@ -143,27 +124,94 @@ function addTiles(array) {
     }
 }
 
+function keyDown(e) {
+    if (e.keyCode == Keyboard.LEFT) {
+        movePlayer(-blockSize, 0);
+	} else if (e.keyCode == Keyboard.RIGHT) {
+		movePlayer(blockSize, 0);
+	} else if (e.keyCode == Keyboard.UP) {
+		movePlayer(0, -blockSize);
+	} else if (e.keyCode == Keyboard.DOWN) {
+		movePlayer(0, blockSize);
+	} else if (e.keyCode == Keyboard.letter('Z')) {
+	    undoMove();
+	} else if (e.keyCode == Keyboard.letter('Y')) {
+	    redoMove();
+	}
+	// set undo for player and egg positions
+    // check for collision with egg, move egg
+    // check for collision with wall / egg on egg or wall
+    // undo if collision
+    // check for all eggs to be on all nests
+    
+    
+}
+
+function movePlayer(x, y) {
+    undo.push({
+        "x": player.getX(),
+        "y": player.getY(),
+        "eggs": getEggLocations()
+    });
+    
+	var rollback = false;
+	
+	player.move(x, y);
+	
+	if (doesCollide(player, walls)) {
+	    rollback = true;
+	}
+	
+	var movingEgg = doesCollide(player, eggs);
+	
+	if (movingEgg != null) {
+	    movingEgg.move(x, y);
+	    if (doesCollide(movingEgg, eggs) != null) {
+	        rollback = true;
+	    }
+	}
+	
+	if (movingEgg != null && doesCollide(movingEgg, walls) != null) {
+        rollback = true;
+    }
+	
+    if (rollback) {
+	    undoMove();
+	}
+}
+
+function getEggLocations() {
+    var array = [];
+    for(var i = 0; i < eggs.length; i++) {
+        var xy = {
+          "x": eggs[i].getX(),
+          "y": eggs[i].getY()  
+        };
+        array.push(xy);
+    }
+    return array;
+}
+
+function undoMove() {
+    var move = undo.pop();
+    player.setPosition(move.x, move.y);
+    for(var i = 0; i < move.eggs.length; i++) {
+        eggs[i].setPosition(move.eggs[i].x, move.eggs[i].y);
+    }
+}
+
+function doesCollide(item, array) {
+    for(var i = 0; i < array.length; i++) {
+        if (item != array[i] && item.getX() == array[i].getX() && item.getY() == array[i].getY()) {
+            return array[i];
+        }
+    }
+    return null;
+}
+
 var levels = [
     ["11111111","10000021","14030301","10000021","11111111"],
     ["  111   ","  121   ","  101111","11130321","12034111","111131  ","   121  ","   111  "],
-    ["1111111","1000001","1403001","1113101","1000101","1200001","1200001","1203001","1111111"]//,
-    //["11111    ","14001    ","10331 111",""10301 121","111011121"," 11000021"," 10001001"," 10001111"," 11111   "]
+    ["1111111","1000001","1403001","1113101","1000101","1200001","1200001","1203001","1111111"],
+    ["11111    ","14001    ","10331 111","10301 121","111011121"," 11000021"," 10001001"," 10001111"," 11111   "]
 ];
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
