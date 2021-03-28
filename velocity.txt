@@ -1,0 +1,162 @@
+https://codehs.com/sandbox/id/javascript-graphics-SVIDCh
+
+var MAXRADIUS = 200;
+var GRIDUNIT = 50;
+var bg = new Circle(MAXRADIUS);
+var ballX  = new Circle(10);
+var ballY  = new Circle(10);
+var ballXY = new Circle(10);
+var ballM1 = new Circle(10);
+var ballM2 = new Circle(10);
+var stepCounter = 0;
+var step = 60;
+var steps = 80;
+
+function start() { 
+    // setSize(500, 500);
+    
+    drawBall(bg, "#F0F0F0");
+    drawCenterBall();
+    // bg.setPosition(getWidth() / 2, 0);
+    // bg.setPosition(getWidth() / 2, getHeight() / 2);
+    
+    drawGridLines();
+    
+    drawBall(ballX, Color.red);
+    drawBall(ballY, Color.green);
+    drawBall(ballXY, Color.blue);
+    drawBall(ballM1, "#FF00FF");
+    drawBall(ballM2, "#FF00FF");
+    
+    ballM1.setPosition(GRIDUNIT * 4, GRIDUNIT * 4 - 10);
+    ballM2.setPosition(GRIDUNIT * 4, GRIDUNIT * 4 + 10);
+    
+    // setTimer(moveOld, 50);
+    setTimer(move, 50);
+    // setTimer(orbit, 50);
+}
+
+function drawGridLines() {
+    for (var i = GRIDUNIT; i <= getWidth(); i+=GRIDUNIT) {
+        drawGridLine(i, 0, i, getHeight());
+    }
+    
+    for (var j = GRIDUNIT; j <= getHeight(); j+=GRIDUNIT) {
+        drawGridLine(0, j, getWidth(), j);
+    }
+}
+
+function drawGridLine(x1, y1, x2, y2) {
+    var line = new Line(x1, y1, x2, y2);
+    line.setColor("#C0C0C0");
+    line.setLineWidth(1);
+    add(line);
+}
+
+function drawBall(ball, color) {
+    ball.setPosition(0, 0);
+    ball.setColor(color);
+    // ball.setColor("#ffffff00");
+    // ball.setFilled(false);
+    ball.setBorder(true);
+    ball.setBorderWidth(1);
+    ball.setBorderColor(Color.black);
+    add(ball);
+}
+
+function drawCenterBall() {
+    var ball = new Circle(GRIDUNIT);
+    ball.setPosition(GRIDUNIT * 4, GRIDUNIT * 5);
+    ball.setColor("#ffffff00");
+    ball.setFilled(false);
+    ball.setBorder(true);
+    ball.setBorderWidth(1);
+    ball.setBorderColor(Color.black);
+    add(ball);
+}
+
+function move() {
+    var vectorX = 5;
+    var vectorY = 5;
+    var targetlength = 5;
+    stepCounter += targetlength;
+    
+    ballX.move(vectorX, 0);
+    ballY.move(0, vectorY);
+    
+    var magnitude = getMagnitude(vectorX, vectorY);
+    ballXY.move(targetlength * vectorX / magnitude, targetlength * vectorY / magnitude);
+    
+    if (stepCounter >= MAXRADIUS) {
+        print(ballXY.getX() + ", " + ballXY.getY());
+        stopTimer(move);
+        // setTimer(move2, 500);
+        setTimer(orbit, 50);
+    }
+}
+
+function move2() {
+    // Rcos(−π/4),Rsin(−π/4)
+    // var x = originX + cos(angle)*radius;
+    // var y = originY + sin(angle)*radius;
+    
+    var x = 0 + Math.cos(ballXY.getX()) * MAXRADIUS;
+    var y = 0 + Math.sin(ballXY.getX()) * MAXRADIUS;
+    ballXY.setPosition(x, y);
+}
+
+function moveOld() {
+    var speed = 5;
+    stepCounter += speed;
+    
+    ballX.move(speed, 0);
+    ballY.move(0, speed);
+
+    ballXY.move(speed, speed);
+    
+    if (stepCounter >= MAXRADIUS) {
+        stopTimer(moveOld);
+    }
+}
+
+function getMagnitude(x, y) {
+    return Math.sqrt(Math.abs(x) ** 2 + Math.abs(y) ** 2);
+}
+
+function normalizedVector(x, y, magnitude) {
+    print(x / magnitude);
+    print(y / magnitude);
+}
+
+function drawCirclePoints(points, radius, x, y) {
+    // DrawCirclePoints(8, 10, new Point(0,0));
+    // https://stackoverflow.com/questions/5300938/calculating-the-position-of-points-in-a-circle
+    var slice = 2 * Math.PI / points;
+    for (var i = 0; i < points; i++)
+    {
+        var angle = slice * i;
+        var newX = Math.round(x + radius * Math.cos(angle));
+        var newY = Math.round(y + radius * Math.sin(angle));
+        
+        movePointAlongCirle();
+    }
+}
+
+function orbit() {
+    if (step % steps == 0) {
+        step = 0;
+    }
+    movePointAlongCirle(steps, MAXRADIUS / 4 + 10, GRIDUNIT * 4, GRIDUNIT * 5, true, ballM1);
+    movePointAlongCirle(steps, MAXRADIUS / 4 - 10, GRIDUNIT * 4, GRIDUNIT * 5, false, ballM2);
+    step++;
+}
+
+function movePointAlongCirle(points, radius, x, y, isClockwise, ball) {
+    var direction = isClockwise ? 1 : -1;
+    
+    var slice = 2 * Math.PI / points;
+    var angle = slice * step * direction;
+    var newX = Math.round(x + radius * Math.cos(angle));
+    var newY = Math.round(y + radius * Math.sin(angle));
+    ball.setPosition(newX, newY);
+}
