@@ -1,0 +1,170 @@
+var GRIDUNIT = 25;
+var PIPESPEED = -5;
+var PIPEWIDTH = 50;
+var PIPEHEIGTH = 350
+var GAPX = 175;
+var GAPY = 100;
+
+var gameState = false;
+var pipes = [];
+var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/player.png");
+var pipeScrollEnd = 0;
+var pipeScrollStart = 0;
+var currentAngle = 0;
+var yVo;
+var yV;
+
+function start() { 
+    // setSize(500, 500);
+    // 400, 480
+    
+    drawGridLines();
+
+    var startPostion = 100;
+    
+    pipes.push(drawRectangle(100, 0));
+    pipes.push(drawRectangle(100, getHeight() - 200));
+    repositionPipes(pipes[0], pipes[1], startPostion, 200);
+    
+    pipes.push(drawRectangle(250, 0));
+    pipes.push(drawRectangle(250, getHeight() - 200));
+    repositionPipes(pipes[2], pipes[3], startPostion + GAPX, getRandomHeight());
+    
+    pipes.push(drawRectangle(400, 0));
+    pipes.push(drawRectangle(400, getHeight() - 200));
+    repositionPipes(pipes[4], pipes[5], startPostion + (GAPX * 2), getRandomHeight());
+
+    bird.setSize(30, 30);
+    bird.setPosition(getWidth() / 3, getHeight() / 2);
+    add(bird);
+    
+    //pipeScrollEnd = getWidth() / 2 - pipes[0].getWidth() + pipes[0].getWidth() / 2 - GAPX;
+    //pipeScrollStart = getWidth() / 2 + pipes[0].getWidth()- pipes[0].getWidth() / 2 + GAPX;
+    
+    //                         200 - 50 - 262.5 = 162.5
+    pipeScrollEnd = getWidth() / 2 - pipes[0].getWidth() * 2 - (GAPX);
+    //       445 =4          200            (65?)             +  175 + 5
+    pipeScrollStart = getWidth() / 2 + pipes[0].getWidth() * 1.5 + (GAPX) + PIPESPEED;
+    //pipeScrollStart = 450 + PIPESPEED;
+    
+    print("pipeScrollEnd: " + pipeScrollEnd);
+    print("pipeScrollStart: " + pipeScrollStart);
+    
+    // drawBorder(0, 25);
+    // drawBorder(375, 25);
+    
+    yV = -10;
+    yVo = yV;
+    
+    keyDownMethod(keyDown);
+    
+    // var pipe = new WebImage("https://p7.hiclipart.com/preview/294/165/141/mario-pipe-clip-art-water-pipe-cliparts-vector-thumbnail.jpg");
+    // pipe.setSize(30, 30);
+    // pipe.setPosition(getWidth() / 2, getHeight() / 2);
+    // add(pipe);
+}
+
+function drawGridLines() {
+    for (var i = GRIDUNIT; i <= getWidth(); i+=GRIDUNIT) {
+        drawGridLine(i, 0, i, getHeight());
+    }
+    
+    for (var j = GRIDUNIT; j <= getHeight(); j+=GRIDUNIT) {
+        drawGridLine(0, j, getWidth(), j);
+    }
+}
+
+function drawGridLine(x1, y1, x2, y2) {
+    var line = new Line(x1, y1, x2, y2);
+    line.setColor("#C0C0C0");
+    if (x1 == getWidth() / 2 || y1 == getHeight() / 2) {
+        line.setColor(Color.red);
+    }
+    line.setLineWidth(1);
+    add(line);
+}
+
+function drawBorder(x, width) {
+    var rect = new Rectangle(width, getHeight());
+    rect.setPosition(x, 0);
+    rect.setColor("#222222");
+    add(rect);
+}
+
+function drawRectangle(x, y) {
+    var rect = new Rectangle(PIPEWIDTH, PIPEHEIGTH);
+    rect.setPosition(x, y);
+    rect.setColor(Color.green);
+    add(rect);
+    return rect;
+}
+
+function getRandomHeight() {
+    var x = Randomizer.nextInt(100, 300);
+    var r = (x / 10) % 10;
+    return Randomizer.nextInt(50, 350);
+}
+
+function repositionPipes(pipeTop, pipeBottom, x, y) {
+    pipeTop.setPosition(x, y - pipeTop.getHeight());
+    pipeBottom.setPosition(x, y + GAPY);
+}
+
+function tick() {
+    flap();
+    
+    for(var i = 0; i < pipes.length; i+=2) {
+        pipes[i].move(PIPESPEED, 0);
+        pipes[i + 1].move(PIPESPEED, 0);
+        
+        if (pipes[i].getX() < pipeScrollEnd) {
+            print("end: " + pipes[i].getX() + "  start: " + pipeScrollStart)
+            repositionPipes(pipes[i], pipes[i + 1], 
+                pipeScrollStart, getRandomHeight());
+        }
+    }
+}
+
+function keyDown(e) {
+    if (e.keyCode == Keyboard.letter('P')) {
+		gameState = !gameState;
+		if (gameState) {
+		    setTimer(tick, 50);
+		} else {
+		    stopTimer(tick);
+		}
+	} else if (e.keyCode == Keyboard.letter('T')) {
+		tick();
+	} else if (!gameState && e.keyCode == Keyboard.SPACE) {
+	    gameState = true;
+        setTimer(tick, 50);
+	} else {
+    	yV = -10;
+        yVo = yV;
+	}
+}
+
+function flap() {
+    bird.move(0, yV++);
+    bird.rotate(currentAngle * -1);
+    
+    if (yV > 15) {
+        currentAngle = 70;
+    } else if (yV > 6) {
+        currentAngle = 45;
+    } else if (yV < 0) {
+        currentAngle = -45
+    } else {
+        currentAngle = 0;
+    }
+    bird.rotate(currentAngle);
+    
+    if (bird.getY() > getHeight() - bird.getHeight()) {
+        yV = yVo * 0.75;
+        yVo = yV;
+
+        bird.setPosition(bird.getX(), getHeight() - bird.getHeight());
+    } 
+}
+
+
