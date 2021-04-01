@@ -5,9 +5,12 @@ var PIPEHEIGTH = 350
 var GAPX = 175;
 var GAPY = 100;
 
+var drawGrid = false;
 var gameState = false;
 var pipes = [];
-var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/player.png");
+var floors = [];
+// var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/player.png");
+var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-blue.png");
 var pipeScrollEnd = 0;
 var pipeScrollStart = 0;
 var currentAngle = 0;
@@ -18,23 +21,28 @@ function start() {
     // setSize(500, 500);
     // 400, 480
     
+    drawBackground();
     drawGridLines();
 
-    var startPostion = 100;
+    var startPostion = getWidth() * 0.75;
     
-    pipes.push(drawRectangle(100, 0));
+    pipes.push(drawRectangle(100, 0, 180));
     pipes.push(drawRectangle(100, getHeight() - 200));
-    repositionPipes(pipes[0], pipes[1], startPostion, 200);
+    repositionPipes(pipes[0], pipes[1], startPostion , 200);
     
-    pipes.push(drawRectangle(250, 0));
+    pipes.push(drawRectangle(250, 0, 180));
     pipes.push(drawRectangle(250, getHeight() - 200));
     repositionPipes(pipes[2], pipes[3], startPostion + GAPX, getRandomHeight());
     
-    pipes.push(drawRectangle(400, 0));
+    pipes.push(drawRectangle(400, 0, 180));
     pipes.push(drawRectangle(400, getHeight() - 200));
     repositionPipes(pipes[4], pipes[5], startPostion + (GAPX * 2), getRandomHeight());
 
-    bird.setSize(30, 30);
+    drawFloor();
+    
+    // bird.setSize(30, 30);
+    var scaler = 0.75
+    bird.setSize(50 * scaler, 34 * scaler);
     bird.setPosition(getWidth() / 3, getHeight() / 2);
     add(bird);
     
@@ -50,27 +58,42 @@ function start() {
     print("pipeScrollEnd: " + pipeScrollEnd);
     print("pipeScrollStart: " + pipeScrollStart);
     
-    // drawBorder(0, 25);
-    // drawBorder(375, 25);
+    drawBorder(0, 25);
+    drawBorder(375, 25);
     
     yV = -10;
     yVo = yV;
     
     keyDownMethod(keyDown);
+}
+
+function drawBackground() {
+    var bg = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-bg.png");
+    bg.setPosition(0, 0);
+    add(bg);
+}
+
+function drawFloor() {
+    var floor1 = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-floor.png");
+    floor1.setPosition(0, 425);
+    add(floor1);
+    floors.push(floor1);
     
-    // var pipe = new WebImage("https://p7.hiclipart.com/preview/294/165/141/mario-pipe-clip-art-water-pipe-cliparts-vector-thumbnail.jpg");
-    // pipe.setSize(30, 30);
-    // pipe.setPosition(getWidth() / 2, getHeight() / 2);
-    // add(pipe);
+    var floor2 = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-floor.png");
+    floor2.setPosition(getWidth(), 425);
+    add(floor2);
+    floors.push(floor2);
 }
 
 function drawGridLines() {
-    for (var i = GRIDUNIT; i <= getWidth(); i+=GRIDUNIT) {
-        drawGridLine(i, 0, i, getHeight());
-    }
-    
-    for (var j = GRIDUNIT; j <= getHeight(); j+=GRIDUNIT) {
-        drawGridLine(0, j, getWidth(), j);
+    if (drawGrid) {
+        for (var i = GRIDUNIT; i <= getWidth(); i+=GRIDUNIT) {
+            drawGridLine(i, 0, i, getHeight());
+        }
+        
+        for (var j = GRIDUNIT; j <= getHeight(); j+=GRIDUNIT) {
+            drawGridLine(0, j, getWidth(), j);
+        }
     }
 }
 
@@ -91,38 +114,26 @@ function drawBorder(x, width) {
     add(rect);
 }
 
-function drawRectangle(x, y) {
-    var rect = new Rectangle(PIPEWIDTH, PIPEHEIGTH);
+function drawRectangle(x, y, rotation=0) {
+    // var rect = new Rectangle(PIPEWIDTH, PIPEHEIGTH);
+    // rect.setColor(Color.green);
+    var rect = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/pipe.png");
+    rect.setSize(50, 350);
+    rect.rotate(rotation);
     rect.setPosition(x, y);
-    rect.setColor(Color.green);
     add(rect);
     return rect;
 }
 
 function getRandomHeight() {
-    var x = Randomizer.nextInt(100, 300);
-    var r = (x / 10) % 10;
-    return Randomizer.nextInt(50, 350);
+    // var x = Randomizer.nextInt(100, 300);
+    // var r = (x / 10) % 10;
+    return Randomizer.nextInt(50, 300);
 }
 
 function repositionPipes(pipeTop, pipeBottom, x, y) {
     pipeTop.setPosition(x, y - pipeTop.getHeight());
     pipeBottom.setPosition(x, y + GAPY);
-}
-
-function tick() {
-    flap();
-    
-    for(var i = 0; i < pipes.length; i+=2) {
-        pipes[i].move(PIPESPEED, 0);
-        pipes[i + 1].move(PIPESPEED, 0);
-        
-        if (pipes[i].getX() < pipeScrollEnd) {
-            print("end: " + pipes[i].getX() + "  start: " + pipeScrollStart)
-            repositionPipes(pipes[i], pipes[i + 1], 
-                pipeScrollStart, getRandomHeight());
-        }
-    }
 }
 
 function keyDown(e) {
@@ -142,6 +153,18 @@ function keyDown(e) {
     	yV = -10;
         yVo = yV;
 	}
+}
+
+function tick() {
+    flap();
+    
+    scrollPipes();
+    
+    scrollFloor();
+    
+    // Check for score update
+    
+    isGameOver();
 }
 
 function flap() {
@@ -164,7 +187,41 @@ function flap() {
         yVo = yV;
 
         bird.setPosition(bird.getX(), getHeight() - bird.getHeight());
-    } 
+    }
 }
 
+function scrollPipes() {
+    for(var i = 0; i < pipes.length; i+=2) {
+        pipes[i].move(PIPESPEED, 0);
+        pipes[i + 1].move(PIPESPEED, 0);
+        
+        if (pipes[i].getX() < pipeScrollEnd) {
+            repositionPipes(pipes[i], pipes[i + 1], 
+                pipeScrollStart, getRandomHeight());
+        }
+    }
+}
 
+function scrollFloor() {
+    for(var i = 0; i < floors.length; i++) {
+        floors[i].move(-5, 0);
+        if (floors[i].getX() + floors[i].getWidth() < 0) {
+            floors[i].setPosition(getWidth(), floors[i].getY());
+        }
+    }
+}
+
+function isGameOver() {
+    hasCollision(bird, pipes);
+    hasCollision(bird, floors);
+}
+
+function hasCollision(bird, array) {
+    for(var i = 0; i < array.length; i++) {
+        if (bird.getX() + bird.getWidth() > array[i].getX() && bird.getX() < array[i].getX() + array[i].getWidth()) {
+            if (bird.getY() + bird.getHeight() > array[i].getY() && bird.getY() < array[i].getY() + array[i].getHeight()) {
+                return true;
+            }
+        }
+    }
+}
