@@ -1,25 +1,34 @@
+// https://codehs.com/sandbox/id/javascript-graphics-SVIDCh
+
 var GRIDUNIT = 25;
 var PIPESPEED = -5;
 var PIPEWIDTH = 50;
 var PIPEHEIGTH = 350
 var GAPX = 175;
 var GAPY = 100;
+var READY = 0;
+var RUNNING = 1;
+var PAUSED = 2
+var GAMEOVER = 3;
 
 var drawGrid = false;
 var gameState = false;
 var pipes = [];
 var floors = [];
 // var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/player.png");
-var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-blue.png");
+var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-red.png");
+var scoreText = new Text("0", "14pt Arial");
 var pipeScrollEnd = 0;
 var pipeScrollStart = 0;
 var currentAngle = 0;
+var score = 0;
 var yVo;
 var yV;
 
 function start() { 
     // setSize(500, 500);
     // 400, 480
+    setSize(350, 480);
     
     drawBackground();
     drawGridLines();
@@ -46,25 +55,30 @@ function start() {
     bird.setPosition(getWidth() / 3, getHeight() / 2);
     add(bird);
     
-    //pipeScrollEnd = getWidth() / 2 - pipes[0].getWidth() + pipes[0].getWidth() / 2 - GAPX;
-    //pipeScrollStart = getWidth() / 2 + pipes[0].getWidth()- pipes[0].getWidth() / 2 + GAPX;
-    
-    //                         200 - 50 - 262.5 = 162.5
     pipeScrollEnd = getWidth() / 2 - pipes[0].getWidth() * 2 - (GAPX);
-    //       445 =4          200            (65?)             +  175 + 5
     pipeScrollStart = getWidth() / 2 + pipes[0].getWidth() * 1.5 + (GAPX) + PIPESPEED;
-    //pipeScrollStart = 450 + PIPESPEED;
     
-    print("pipeScrollEnd: " + pipeScrollEnd);
-    print("pipeScrollStart: " + pipeScrollStart);
+    // drawBorder(0, 25);
+    // drawBorder(375, 25);
     
-    drawBorder(0, 25);
-    drawBorder(375, 25);
+    drawScore();
     
     yV = -10;
     yVo = yV;
     
     keyDownMethod(keyDown);
+    mouseClickMethod(mouseClick);
+}
+
+function rest() {
+    score = 0;
+    var startPostion = getWidth() * 0.75;
+    
+    repositionPipes(pipes[0], pipes[1], startPostion , 200);
+    repositionPipes(pipes[2], pipes[3], startPostion + GAPX, getRandomHeight());
+    repositionPipes(pipes[4], pipes[5], startPostion + (GAPX * 2), getRandomHeight());
+    
+    bird.setPosition(getWidth() / 3, getHeight() / 2);
 }
 
 function drawBackground() {
@@ -83,6 +97,12 @@ function drawFloor() {
     floor2.setPosition(getWidth(), 425);
     add(floor2);
     floors.push(floor2);
+}
+
+function drawScore() {
+    scoreText.setPosition(getWidth() / 2, getHeight() - scoreText.getHeight() + 3);
+    scoreText.setColor(Color.white);
+    add(scoreText);
 }
 
 function drawGridLines() {
@@ -121,14 +141,14 @@ function drawRectangle(x, y, rotation=0) {
     rect.setSize(50, 350);
     rect.rotate(rotation);
     rect.setPosition(x, y);
+    rect.status = 0;
     add(rect);
     return rect;
 }
 
 function getRandomHeight() {
-    // var x = Randomizer.nextInt(100, 300);
-    // var r = (x / 10) % 10;
-    return Randomizer.nextInt(50, 300);
+    var x = Randomizer.nextInt(50, 275);
+    return 25 * Math.floor(x / 25);
 }
 
 function repositionPipes(pipeTop, pipeBottom, x, y) {
@@ -155,15 +175,23 @@ function keyDown(e) {
 	}
 }
 
+function mouseClick() {
+    if (!gameState) {
+	    gameState = true;
+        setTimer(tick, 50);
+	} else {
+    	yV = -10;
+        yVo = yV;
+	}
+}
+
 function tick() {
     flap();
     
     scrollPipes();
     
     scrollFloor();
-    
-    // Check for score update
-    
+
     isGameOver();
 }
 
@@ -198,6 +226,14 @@ function scrollPipes() {
         if (pipes[i].getX() < pipeScrollEnd) {
             repositionPipes(pipes[i], pipes[i + 1], 
                 pipeScrollStart, getRandomHeight());
+            pipes[i].status = 0;
+        }
+        
+        if (bird.getX() + bird.getWidth() >= pipes[i].getX() + pipes[i].getWidth() / 2) {
+            if (pipes[i].status == 0) {
+                pipes[i].status = 1;
+                scoreText.setText(++score);
+            }
         }
     }
 }
@@ -206,9 +242,13 @@ function scrollFloor() {
     for(var i = 0; i < floors.length; i++) {
         floors[i].move(-5, 0);
         if (floors[i].getX() + floors[i].getWidth() < 0) {
-            floors[i].setPosition(getWidth(), floors[i].getY());
+            floors[i].setPosition(getWidth() - 5, floors[i].getY());
         }
     }
+}
+
+function pipeCleared() {
+    
 }
 
 function isGameOver() {
