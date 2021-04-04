@@ -17,7 +17,10 @@ var pipes = [];
 var floors = [];
 // var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/player.png");
 var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-red.png");
+var white = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/white-50.png");
+var gameOverText = new Text("GAME OVER", "24pt Arial");
 var scoreText = new Text("0", "14pt Arial");
+var scoreBoard = new Rectangle(225, 125);
 var pipeScrollEnd = 0;
 var pipeScrollStart = 0;
 var currentAngle = 0;
@@ -31,29 +34,16 @@ function start() {
     setSize(350, 480);
     
     drawBackground();
+    
     drawGridLines();
 
-    var startPostion = getWidth() * 0.75;
+    drawPipes();
     
-    pipes.push(drawRectangle(100, 0, 180));
-    pipes.push(drawRectangle(100, getHeight() - 200));
-    repositionPipes(pipes[0], pipes[1], startPostion , 200);
-    
-    pipes.push(drawRectangle(250, 0, 180));
-    pipes.push(drawRectangle(250, getHeight() - 200));
-    repositionPipes(pipes[2], pipes[3], startPostion + GAPX, getRandomHeight());
-    
-    pipes.push(drawRectangle(400, 0, 180));
-    pipes.push(drawRectangle(400, getHeight() - 200));
-    repositionPipes(pipes[4], pipes[5], startPostion + (GAPX * 2), getRandomHeight());
+    resetGame();
 
     drawFloor();
     
-    // bird.setSize(30, 30);
-    var scaler = 0.75
-    bird.setSize(50 * scaler, 34 * scaler);
-    bird.setPosition(getWidth() / 3, getHeight() / 2);
-    add(bird);
+    scaleBirdImage();
     
     pipeScrollEnd = getWidth() / 2 - pipes[0].getWidth() * 2 - (GAPX);
     pipeScrollStart = getWidth() / 2 + pipes[0].getWidth() * 1.5 + (GAPX) + PIPESPEED;
@@ -63,28 +53,65 @@ function start() {
     
     drawScore();
     
-    yV = -10;
-    yVo = yV;
+    drawWhiteFlash();
     
+    // scoreBoard.setPosition(getWidth() / 2 - scoreBoard.getWidth() / 2, getHeight() / 2 - scoreBoard.getHeight() / 2);
+    // scoreBoard.setColor("#ddd995");
+    // scoreBoard.setBorder(true);
+    // scoreBoard.setBorderWidth(3);
+    // add(scoreBoard);
+    
+    // var score = new Text("Score", "16pt Arial");
+    // score.setColor(Color.white);
+    // score.setPosition(scoreBoard.getX() + 10, scoreBoard.getY() + 75);
+    // add(score);
+    
+    // var best = new Text("Best", "16pt Arial");
+    // best.setColor(Color.white);
+    // best.setPosition(scoreBoard.getX() + 150, scoreBoard.getY() + 75);
+    // add(best);
+
+    setTimer(tick, 50);
     keyDownMethod(keyDown);
-    // mouseClickMethod(mouseClick);
 }
 
-function rest() {
+function resetGame() {
     score = 0;
-    var startPostion = getWidth() * 0.75;
+    
+    var startPostion = getWidth();
     
     repositionPipes(pipes[0], pipes[1], startPostion , 200);
     repositionPipes(pipes[2], pipes[3], startPostion + GAPX, getRandomHeight());
     repositionPipes(pipes[4], pipes[5], startPostion + (GAPX * 2), getRandomHeight());
     
+    bird.rotate(currentAngle * -1);
+    currentAngle = 0;
+    
     bird.setPosition(getWidth() / 3, getHeight() / 2);
+    
+    yV = -10;
+    yVo = yV;
+    
+    gameState = READY;
 }
 
 function drawBackground() {
     var bg = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-bg.png");
     bg.setPosition(0, 0);
     add(bg);
+}
+
+function drawWhiteFlash() {
+    white.setPosition(0, 0);
+    white.setSize(getWidth(), getHeight());
+}
+
+function scaleBirdImage() {
+    // bird.setSize(30, 30);
+    var scaler = 0.75
+    bird.setSize(50 * scaler, 34 * scaler);
+    bird.setPosition(getWidth() / 3, getHeight() / 2);
+    add(bird);
 }
 
 function drawFloor() {
@@ -103,6 +130,10 @@ function drawScore() {
     scoreText.setPosition(getWidth() / 2, getHeight() - scoreText.getHeight() + 3);
     scoreText.setColor(Color.white);
     add(scoreText);
+    
+    gameOverText.setPosition(getWidth() / 2 - gameOverText.getWidth() / 2, getHeight() / 2 - gameOverText.getHeight() / 2);
+    gameOverText.setColor(Color.black);
+    add(gameOverText);
 }
 
 function drawGridLines() {
@@ -125,6 +156,17 @@ function drawGridLine(x1, y1, x2, y2) {
     }
     line.setLineWidth(1);
     add(line);
+}
+
+function drawPipes() {
+    pipes.push(drawRectangle(100, 0, 180));
+    pipes.push(drawRectangle(100, getHeight() - 200));
+    
+    pipes.push(drawRectangle(250, 0, 180));
+    pipes.push(drawRectangle(250, getHeight() - 200));
+    
+    pipes.push(drawRectangle(400, 0, 180));
+    pipes.push(drawRectangle(400, getHeight() - 200));
 }
 
 function drawBorder(x, width) {
@@ -160,34 +202,25 @@ function keyDown(e) {
     if (e.keyCode == Keyboard.letter('P')) {
 		if (gameState == PAUSED) {
 		    gameState = RUNNING;
-		    setTimer(tick, 50);
 		} else {
 		    gameState = PAUSED;
-		    stopTimer(tick);
 		}
 	} else if (e.keyCode == Keyboard.letter('T')) {
 		tick();
-	} else if (gameState == READY && e.keyCode == Keyboard.SPACE) {
+	} else if ((gameState == READY || gameState == PAUSED) && e.keyCode == Keyboard.SPACE) {
 	    gameState = RUNNING;
-        setTimer(tick, 50);
+	} else if (gameState == GAMEOVER) {
+	    resetGame();
 	} else {
     	yV = -10;
         yVo = yV;
 	}
 }
 
-// function mouseClick() {
-//     if (!gameState) {
-// 	    gameState = true;
-//         setTimer(tick, 50);
-// 	} else {
-//     	yV = -10;
-//         yVo = yV;
-// 	}
-// }
-
 function tick() {
-    if (gameState == RUNNING) {
+    if (gameState == READY) {
+        scrollFloor();
+    } else if (gameState == RUNNING) {
         flap();
         
         scrollPipes();
@@ -247,7 +280,7 @@ function scrollFloor() {
     for(var i = 0; i < floors.length; i++) {
         floors[i].move(-5, 0);
         if (floors[i].getX() + floors[i].getWidth() < 0) {
-            floors[i].setPosition(getWidth() - 5, floors[i].getY());
+            floors[i].setPosition(floors[i].getWidth() - 5, floors[i].getY());
         }
     }
 }
@@ -255,6 +288,7 @@ function scrollFloor() {
 function isGameOver() {
     if (hasCollision(bird, pipes) || hasCollision(bird, floors)) {
         gameState = GAMEOVER;
+        add(white);
     }
 }
 
@@ -273,14 +307,13 @@ function deathAnimation() {
         bird.rotate(currentAngle * -1);
         currentAngle = 90;
         bird.rotate(currentAngle);
+        remove(white);
     }
     
     if (bird.getY() < FLOORY) {
         if (bird.getY() + bird.getHeight() + 20 > FLOORY) {
-            print(bird.getY());
             bird.setPosition(bird.getX(), FLOORY - bird.getHeight());
-            print(bird.getY());
-            gameState = READY;  
+            // gameState = READY;  
         } else {
             bird.move(0, 20);
         }
