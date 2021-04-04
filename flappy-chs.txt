@@ -18,19 +18,22 @@ var floors = [];
 // var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/player.png");
 var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-red.png");
 var white = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/white-50.png");
-var gameOverText = new Text("GAME OVER", "24pt Arial");
+var gameOverImage = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/game-over.png");
 var scoreText = new Text("0", "14pt Arial");
 var scoreBoard = new Rectangle(225, 125);
 var pipeScrollEnd = 0;
 var pipeScrollStart = 0;
 var currentAngle = 0;
+var highScore = 0;
 var score = 0;
+var score1 = new Text("Score", "16pt Arial");
+var score2 = new Text(score, "16pt Arial");
+var best1 = new Text("Best", "16pt Arial");
+var best2 = new Text(highScore, "16pt Arial");
 var yVo;
 var yV;
 
 function start() { 
-    // setSize(500, 500);
-    // 400, 480
     setSize(350, 480);
     
     drawBackground();
@@ -45,38 +48,22 @@ function start() {
     
     scaleBirdImage();
     
-    pipeScrollEnd = getWidth() / 2 - pipes[0].getWidth() * 2 - (GAPX);
-    pipeScrollStart = getWidth() / 2 + pipes[0].getWidth() * 1.5 + (GAPX) + PIPESPEED;
-    
-    // drawBorder(0, 25);
-    // drawBorder(375, 25);
-    
-    drawScore();
+    setPipeScrollBounds()
+
+    drawScoreBoard();
     
     drawWhiteFlash();
-    
-    // scoreBoard.setPosition(getWidth() / 2 - scoreBoard.getWidth() / 2, getHeight() / 2 - scoreBoard.getHeight() / 2);
-    // scoreBoard.setColor("#ddd995");
-    // scoreBoard.setBorder(true);
-    // scoreBoard.setBorderWidth(3);
-    // add(scoreBoard);
-    
-    // var score = new Text("Score", "16pt Arial");
-    // score.setColor(Color.white);
-    // score.setPosition(scoreBoard.getX() + 10, scoreBoard.getY() + 75);
-    // add(score);
-    
-    // var best = new Text("Best", "16pt Arial");
-    // best.setColor(Color.white);
-    // best.setPosition(scoreBoard.getX() + 150, scoreBoard.getY() + 75);
-    // add(best);
 
     setTimer(tick, 50);
+    
     keyDownMethod(keyDown);
 }
 
 function resetGame() {
     score = 0;
+    scoreText.setText(score);
+    
+    hideScoreBoard();
     
     var startPostion = getWidth();
     
@@ -84,7 +71,11 @@ function resetGame() {
     repositionPipes(pipes[2], pipes[3], startPostion + GAPX, getRandomHeight());
     repositionPipes(pipes[4], pipes[5], startPostion + (GAPX * 2), getRandomHeight());
     
-    bird.rotate(currentAngle * -1);
+    for(var i = 0; i < pipes.length; i++) {
+        pipes[i].status = 0;
+    }
+    
+    resetBirdAngle();
     currentAngle = 0;
     
     bird.setPosition(getWidth() / 3, getHeight() / 2);
@@ -114,6 +105,11 @@ function scaleBirdImage() {
     add(bird);
 }
 
+function setPipeScrollBounds() {
+    pipeScrollEnd = getWidth() / 2 - pipes[0].getWidth() * 2 - (GAPX);
+    pipeScrollStart = getWidth() / 2 + pipes[0].getWidth() * 1.5 + (GAPX) + PIPESPEED;
+}
+
 function drawFloor() {
     var w = 401;
     var h = 55;
@@ -126,14 +122,58 @@ function drawFloor() {
     }
 }
 
-function drawScore() {
+function drawScoreBoard() {
     scoreText.setPosition(getWidth() / 2, getHeight() - scoreText.getHeight() + 3);
     scoreText.setColor(Color.white);
     add(scoreText);
     
-    gameOverText.setPosition(getWidth() / 2 - gameOverText.getWidth() / 2, getHeight() / 2 - gameOverText.getHeight() / 2);
-    gameOverText.setColor(Color.black);
-    add(gameOverText);
+    gameOverImage.setSize(352 * 0.7, 73 * 0.7);
+    
+    
+    scoreBoard.setColor("#ddd995");
+    scoreBoard.setBorder(true);
+    scoreBoard.setBorderWidth(3);
+    
+    score1.setColor(Color.white);
+    score2.setColor(Color.white);
+    best1.setColor(Color.white);
+    best2.setColor(Color.white);
+    
+    hideScoreBoard();
+    
+    add(gameOverImage);
+    add(scoreBoard);
+    add(score1);
+    add(score2);
+    add(best1);
+    add(best2);
+}
+
+function hideScoreBoard() {
+    gameOverImage.setPosition(getWidth() / 2 - gameOverImage.getWidth() / 2, getHeight());
+    
+    scoreBoard.setPosition(getWidth() / 2 - scoreBoard.getWidth() / 2, getHeight() + 5);
+    score1.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - score1.getWidth() - 20, scoreBoard.getY() + 30);
+    score2.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - score2.getWidth() - 20, scoreBoard.getY() + 55);
+    best1.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - best1.getWidth() - 20, scoreBoard.getY() + 85);
+    best2.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - best2.getWidth() - 20, scoreBoard.getY() + 110);
+}
+
+function showScoreBoard() {
+    if (score > highScore) {
+        highScore = score;
+    }
+    
+    score2.setText(score);
+    best2.setText(highScore);
+    
+    gameOverImage.setPosition(gameOverImage.getX(), getHeight() * 0.25);
+    
+    scoreBoard.setPosition(getWidth() / 2 - scoreBoard.getWidth() / 2, getHeight()  * 0.4);
+    score1.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - score1.getWidth() - 20, scoreBoard.getY() + 30);
+    score2.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - score2.getWidth() - 20, scoreBoard.getY() + 55);
+    best1.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - best1.getWidth() - 20, scoreBoard.getY() + 85);
+    best2.setPosition(scoreBoard.getX() + scoreBoard.getWidth() - best2.getWidth() - 20, scoreBoard.getY() + 110);
 }
 
 function drawGridLines() {
@@ -169,16 +209,7 @@ function drawPipes() {
     pipes.push(drawRectangle(400, getHeight() - 200));
 }
 
-function drawBorder(x, width) {
-    var rect = new Rectangle(width, getHeight());
-    rect.setPosition(x, 0);
-    rect.setColor("#222222");
-    add(rect);
-}
-
 function drawRectangle(x, y, rotation=0) {
-    // var rect = new Rectangle(PIPEWIDTH, PIPEHEIGTH);
-    // rect.setColor(Color.green);
     var rect = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/pipe.png");
     rect.setSize(50, 350);
     rect.rotate(rotation);
@@ -235,7 +266,7 @@ function tick() {
 
 function flap() {
     bird.move(0, yV++);
-    bird.rotate(currentAngle * -1);
+    resetBirdAngle();
     
     if (yV > 15) {
         currentAngle = 70;
@@ -254,6 +285,10 @@ function flap() {
 
         bird.setPosition(bird.getX(), getHeight() - bird.getHeight());
     }
+}
+
+function resetBirdAngle() {
+    bird.rotate(currentAngle * -1);
 }
 
 function scrollPipes() {
@@ -304,7 +339,7 @@ function hasCollision(bird, array) {
 
 function deathAnimation() {
     if (currentAngle != 90) {
-        bird.rotate(currentAngle * -1);
+        resetBirdAngle();
         currentAngle = 90;
         bird.rotate(currentAngle);
         remove(white);
@@ -313,7 +348,7 @@ function deathAnimation() {
     if (bird.getY() < FLOORY) {
         if (bird.getY() + bird.getHeight() + 20 > FLOORY) {
             bird.setPosition(bird.getX(), FLOORY - bird.getHeight());
-            // gameState = READY;  
+            showScoreBoard();
         } else {
             bird.move(0, 20);
         }
