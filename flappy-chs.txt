@@ -8,19 +8,20 @@ var GAPX = 175;
 var GAPY = 100;
 var READY = 0;
 var RUNNING = 1;
-var PAUSED = 2
-var GAMEOVER = 3;
+var PAUSED = 2;
+var GAMEENDING = 3;
+var GAMEOVER = 4;
 
 var drawGrid = false;
 var gameState = READY;
 var pipes = [];
 var floors = [];
-// var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/PythonPushBox/master/assets/player.png");
-var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-red.png");
+var bird = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/flappy-yellow.png");
 var white = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/white-50.png");
 var gameOverImage = new WebImage("https://raw.githubusercontent.com/r0ckl33/chs/master/flappy-assets/game-over.png");
 var scoreText = new Text("0", "14pt Arial");
 var scoreBoard = new Rectangle(225, 125);
+var flash = false;
 var pipeScrollEnd = 0;
 var pipeScrollStart = 0;
 var currentAngle = 0;
@@ -80,6 +81,10 @@ function resetGame() {
     
     bird.setPosition(getWidth() / 3, getHeight() / 2);
     
+    if (bird.hitBox != null) {
+        bird.hitBox.setPosition(bird.getX(), bird.getY());
+    }
+    
     yV = -10;
     yVo = yV;
     
@@ -103,6 +108,15 @@ function scaleBirdImage() {
     bird.setSize(50 * scaler, 34 * scaler);
     bird.setPosition(getWidth() / 3, getHeight() / 2);
     add(bird);
+    
+    var hitBox = new Rectangle(bird.getWidth(), bird.getHeight());
+    hitBox.setPosition(bird.getX(), bird.getY());
+    hitBox.setColor("#FFFFFF00");
+    hitBox.setBorderColor(Color.black);
+    hitBox.setBorderWidth(1);
+    // add(hitBox);
+    
+    bird.hitBox = hitBox;
 }
 
 function setPipeScrollBounds() {
@@ -242,6 +256,8 @@ function keyDown(e) {
 	    gameState = RUNNING;
 	} else if (gameState == GAMEOVER) {
 	    resetGame();
+	} if (e.keyCode == Keyboard.letter('R')) {
+	    clearFlash();
 	} else {
     	yV = -10;
         yVo = yV;
@@ -259,7 +275,7 @@ function tick() {
         scrollFloor();
     
         isGameOver();
-    } else if (gameState == GAMEOVER) {
+    } else if (gameState == GAMEENDING) {
         deathAnimation();
     }
 }
@@ -285,10 +301,16 @@ function flap() {
 
         bird.setPosition(bird.getX(), getHeight() - bird.getHeight());
     }
+    
+    bird.hitBox.setPosition(bird.getX(), bird.getY());
+    bird.hitBox.rotate(currentAngle);
 }
 
 function resetBirdAngle() {
     bird.rotate(currentAngle * -1);
+    if (bird.hitBox != null) {
+        bird.hitBox.rotate(currentAngle * -1);
+    }
 }
 
 function scrollPipes() {
@@ -322,7 +344,9 @@ function scrollFloor() {
 
 function isGameOver() {
     if (hasCollision(bird, pipes) || hasCollision(bird, floors)) {
-        gameState = GAMEOVER;
+        // gameState = GAMEOVER;
+        gameState = GAMEENDING;
+        flash = true;
         add(white);
     }
 }
@@ -338,19 +362,27 @@ function hasCollision(bird, array) {
 }
 
 function deathAnimation() {
-    if (currentAngle != 90) {
-        resetBirdAngle();
-        currentAngle = 90;
-        bird.rotate(currentAngle);
-        remove(white);
+    if (flash) {
+        clearFlash();
     }
     
     if (bird.getY() < FLOORY) {
         if (bird.getY() + bird.getHeight() + 20 > FLOORY) {
             bird.setPosition(bird.getX(), FLOORY - bird.getHeight());
             showScoreBoard();
+            gameState = GAMEOVER;
         } else {
             bird.move(0, 20);
         }
+        bird.hitBox.setPosition(bird.getX(), bird.getY());
     }
+}
+
+function clearFlash() {
+    flash = false;
+    resetBirdAngle();
+    currentAngle = 90;
+    bird.rotate(currentAngle);
+    bird.hitBox.rotate(currentAngle);
+    remove(white);
 }
